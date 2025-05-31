@@ -1,0 +1,492 @@
+import Foundation
+import Network
+import Combine
+import CoreGraphics
+import AppKit
+import ApplicationServices
+
+// MARK: - Data Types
+enum MouseEventType: String, Codable {
+    case move, click, doubleClick, rightClick, scroll
+    case gesture, dragStart, dragMove, dragEnd
+}
+
+enum MouseButton: String, Codable {
+    case left, right, middle
+}
+
+enum MouseGestureType: String, Codable {
+    case none, pinch, rotate, swipe, smartZoom
+}
+
+enum SwipeDirection: String, Codable {
+    case left, right, up, down
+}
+
+struct MouseEventData: Codable {
+    let type: String
+    let deltaX: Float
+    let deltaY: Float
+    let deltaZ: Float
+    let button: MouseButton?
+    let gestureType: MouseGestureType?
+    let gestureScale: Float?
+    let rotation: Float?
+    let swipeDirection: SwipeDirection?
+    let fingerCount: Int?
+    
+    var eventType: MouseEventType? {
+        return MouseEventType(rawValue: type)
+    }
+}
+
+struct KeyEventData: Codable {
+    let type: String
+    let keyCode: UInt16
+    let isKeyDown: Bool
+}
+
+// MARK: - Main Class
+public class ConnectionManager: NSObject, ObservableObject {
+    // MARK: - Published Properties
+    @Published public var isConnected = false
+    @Published public var connectionError: String?
+    @Published public var isListening = false
+    @Published public var connectedDevices: [String: DeviceInfo] = [:]
+    @Published public var hasAccessibilityPermission = false
+    
+    // MARK: - Private Properties
+    private var listener: NWListener?
+    private var connections: [NWConnection] = []
+    private let bonjourService = "_airnative._tcp"
+    private let port: NWEndpoint.Port = 51234
+    private let queue = DispatchQueue(label: "com.airnative.mac.network")
+    private var cancellables = Set<AnyCancellable>()
+    private var permissionCheckTimer: Timer?
+    
+    public struct DeviceInfo {
+        let name: String
+        let connection: NWConnection
+    }
+    
+    // MARK: - Initialization
+    public override init() {
+        super.init()
+        print("ConnectionManager initialized")
+        setupPermissionChecking()
+    }
+    
+    deinit {
+        print("ConnectionManager deinit")
+        permissionCheckTimer?.invalidate()
+        stopListening()
+    }
+}
+
+// MARK: - Permission Handling
+extension ConnectionManager {
+    private func setupPermissionChecking() {
+        checkAccessibilityPermission()
+        permissionCheckTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.checkAccessibilityPermission()
+        }
+    }
+    
+    private func checkAccessibilityPermission() {
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
+        let trusted = AXIsProcessTrustedWithOptions(options as CFDictionary)
+        
+        DispatchQueue.main.async { [weak self] in
+            let wasGranted = self?.hasAccessibilityPermission ?? false
+            self?.hasAccessibilityPermission = trusted
+            
+            if !wasGranted && trusted {
+                print("Accessibility permission granted")
+                self?.connectionError = nil
+            } else if wasGranted && !trusted {
+                print("Accessibility permission revoked")
+                self?.connectionError = "Please grant accessibility permissions in System Settings > Privacy & Security > Accessibility"
+            }
+        }
+    }
+    
+    public func requestAccessibilityPermission() {
+        print("Requesting accessibility permission")
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            // Try to trigger the system prompt by attempting a mouse event
+            let currentMouseLocation = NSEvent.mouseLocation
+            if let mouseMoveEvent = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, 
+                                          mouseCursorPosition: currentMouseLocation, mouseButton: .left) {
+                mouseMoveEvent.post(tap: .cghidEventTap)
+            }
+            
+            DispatchQueue.main.async { [weak self] in
+                // Check if we have permission
+                let trusted = AXIsProcessTrusted()
+                print("Accessibility permission check result: \(trusted)")
+                
+                if trusted {
+                    self?.hasAccessibilityPermission = true
+                    self?.connectionError = nil
+                } else {
+                    self?.hasAccessibilityPermission = false
+                    self?.connectionError = "Please grant accessibility permissions in System Settings"
+                    
+                    // If still no permission, show the prompt and optionally open settings
+                    let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+                    if !AXIsProcessTrustedWithOptions(options) {
+                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Network Handling
+extension ConnectionManager {
+    private func setupNetworkListener() {
+        print("Setting up network listener")
+        let parameters = NWParameters.tcp
+        parameters.includePeerToPeer = true
+        
+        do {
+            listener = try NWListener(using: parameters, on: port)
+            listener?.service = NWListener.Service(type: bonjourService)
+            
+            listener?.stateUpdateHandler = { [weak self] state in
+                print("Listener state updated: \(state)")
+                DispatchQueue.main.async {
+                    switch state {
+                    case .ready:
+                        self?.isListening = true
+                        self?.connectionError = nil
+                    case .failed(let error):
+                        self?.connectionError = "Listener failed: \(error.localizedDescription)"
+                        self?.isListening = false
+                    case .cancelled:
+                        self?.isListening = false
+                    default:
+                        break
+                    }
+                }
+            }
+            
+            listener?.newConnectionHandler = { [weak self] connection in
+                print("New connection received")
+                self?.handleNewConnection(connection)
+            }
+            
+            listener?.start(queue: queue)
+            print("Network listener started")
+        } catch {
+            print("Failed to start listener: \(error)")
+            connectionError = "Failed to start listener: \(error.localizedDescription)"
+        }
+    }
+    
+    private func handleNewConnection(_ connection: NWConnection) {
+        print("Handling new connection")
+        connection.stateUpdateHandler = { [weak self] state in
+            print("Connection state updated: \(state)")
+            DispatchQueue.main.async {
+                switch state {
+                case .ready:
+                    self?.isConnected = true
+                    self?.connectionError = nil
+                    self?.startReceiving(connection)
+                case .failed(let error):
+                    self?.connectionError = "Connection failed: \(error.localizedDescription)"
+                    self?.cleanupConnection(connection)
+                case .cancelled:
+                    self?.cleanupConnection(connection)
+                default:
+                    break
+                }
+            }
+        }
+        
+        connection.start(queue: queue)
+        connections.append(connection)
+    }
+    
+    private func cleanupConnection(_ connection: NWConnection) {
+        print("Cleaning up connection")
+        connection.cancel()
+        if let index = connections.firstIndex(where: { $0 === connection }) {
+            connections.remove(at: index)
+        }
+        if connections.isEmpty {
+            isConnected = false
+        }
+    }
+}
+
+// MARK: - Data Handling
+extension ConnectionManager {
+    private func startReceiving(_ connection: NWConnection) {
+        print("Starting to receive data")
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
+            if let error = error {
+                print("Receive error: \(error)")
+                DispatchQueue.main.async {
+                    self?.connectionError = "Receive error: \(error.localizedDescription)"
+                }
+                return
+            }
+            
+            if let data = data {
+                print("Received data of length: \(data.count)")
+                let messages = data.split(separator: 0x0A)
+                for messageData in messages {
+                    self?.handleReceivedData(Data(messageData), from: connection)
+                }
+            }
+            
+            if !isComplete {
+                self?.startReceiving(connection)
+            }
+        }
+    }
+    
+    private func handleReceivedData(_ data: Data, from connection: NWConnection) {
+        print("Raw received data: \(data.count) bytes")
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print("Received JSON string: \(jsonString)")
+        }
+        
+        do {
+            if let mouseData = try? JSONDecoder().decode(MouseEventData.self, from: data),
+               let eventType = mouseData.eventType {
+                print("Decoded mouse event - type: \(eventType), deltaX: \(mouseData.deltaX), deltaY: \(mouseData.deltaY)")
+                handleMouseEvent(mouseData)
+                return
+            }
+            
+            if let keyData = try? JSONDecoder().decode(KeyEventData.self, from: data) {
+                print("Decoded keyboard event - keyCode: \(keyData.keyCode), isKeyDown: \(keyData.isKeyDown)")
+                handleKeyEvent(keyData)
+                return
+            }
+            
+            throw DecodingError.dataCorrupted(DecodingError.Context(
+                codingPath: [],
+                debugDescription: "Failed to decode as mouse or keyboard event"
+            ))
+        } catch {
+            print("Failed to decode input data: \(error)")
+            print("Error details: \(error.localizedDescription)")
+        }
+    }
+    
+    private func handleKeyEvent(_ data: KeyEventData) {
+        guard hasAccessibilityPermission else {
+            print("Cannot handle key event: No accessibility permission")
+            requestAccessibilityPermission()
+            return
+        }
+        
+        let source = CGEventSource(stateID: .privateState)
+        let keyEvent = CGEvent(keyboardEventSource: source,
+                             virtualKey: CGKeyCode(data.keyCode),
+                             keyDown: data.isKeyDown)
+        
+        keyEvent?.post(tap: CGEventTapLocation.cghidEventTap)
+    }
+}
+
+// MARK: - Mouse Event Handling
+extension ConnectionManager {
+    private func handleMouseEvent(_ data: MouseEventData) {
+        guard let eventType = data.eventType else {
+            print("Invalid mouse event type: \(data.type)")
+            return
+        }
+        
+        print("Handling mouse event: \(eventType)")
+        let screenFrame = NSScreen.main?.frame ?? CGRect.zero
+        
+        let location: CGPoint
+        if case .move = eventType {
+            let currentLocation = NSEvent.mouseLocation
+            location = CGPoint(
+                x: min(max(currentLocation.x + CGFloat(data.deltaX), 0), screenFrame.width),
+                y: min(max(screenFrame.height - currentLocation.y + CGFloat(data.deltaY), 0), screenFrame.height)
+            )
+        } else {
+            location = NSEvent.mouseLocation
+        }
+        
+        print("Mouse event details - Location: \(location), Type: \(eventType)")
+        
+        DispatchQueue.main.async { [weak self] in
+            switch eventType {
+            case .move:
+                if let moveEvent = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved,
+                                         mouseCursorPosition: location, mouseButton: .left) {
+                    moveEvent.setIntegerValueField(.eventSourceStateID, value: Int64(CGEventSourceStateID.privateState.rawValue))
+                    moveEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                }
+                
+            case .click:
+                let source = CGEventSource(stateID: .privateState)
+                if let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown,
+                                         mouseCursorPosition: location, mouseButton: .left) {
+                    downEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                    Thread.sleep(forTimeInterval: 0.05)
+                    
+                    if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp,
+                                           mouseCursorPosition: location, mouseButton: .left) {
+                        upEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                    }
+                }
+                
+            case .doubleClick:
+                let source = CGEventSource(stateID: .privateState)
+                for i in 1...2 {
+                    if let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown,
+                                             mouseCursorPosition: location, mouseButton: .left) {
+                        downEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                        Thread.sleep(forTimeInterval: 0.05)
+                        
+                        if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp,
+                                               mouseCursorPosition: location, mouseButton: .left) {
+                            upEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                        }
+                    }
+                    if i == 1 { Thread.sleep(forTimeInterval: 0.1) }
+                }
+                
+            case .rightClick:
+                let source = CGEventSource(stateID: .privateState)
+                if let downEvent = CGEvent(mouseEventSource: source, mouseType: .rightMouseDown,
+                                         mouseCursorPosition: location, mouseButton: .right) {
+                    downEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                    Thread.sleep(forTimeInterval: 0.05)
+                    
+                    if let upEvent = CGEvent(mouseEventSource: source, mouseType: .rightMouseUp,
+                                           mouseCursorPosition: location, mouseButton: .right) {
+                        upEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                    }
+                }
+                
+            case .dragStart:
+                let source = CGEventSource(stateID: .privateState)
+                if let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown,
+                                         mouseCursorPosition: location, mouseButton: .left) {
+                    downEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                }
+                
+            case .dragMove:
+                let source = CGEventSource(stateID: .privateState)
+                if let dragEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDragged,
+                                         mouseCursorPosition: location, mouseButton: .left) {
+                    dragEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                }
+                
+            case .dragEnd:
+                let source = CGEventSource(stateID: .privateState)
+                if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp,
+                                       mouseCursorPosition: location, mouseButton: .left) {
+                    upEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                }
+                
+            case .gesture:
+                self?.handleGestureEvent(data, at: location)
+                
+            case .scroll:
+                if let scrollEvent = CGEvent(scrollWheelEvent2Source: nil,
+                                           units: .pixel,
+                                           wheelCount: 3,
+                                           wheel1: Int32(data.deltaY),
+                                           wheel2: Int32(data.deltaX),
+                                           wheel3: 0) {
+                    scrollEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                }
+            }
+        }
+    }
+    
+    private func handleGestureEvent(_ data: MouseEventData, at location: CGPoint) {
+        guard let gestureType = data.gestureType else {
+            print("Missing gesture type in event data")
+            return
+        }
+        
+        switch gestureType {
+        case .pinch:
+            if let scrollEvent = CGEvent(scrollWheelEvent2Source: nil,
+                                       units: .pixel,
+                                       wheelCount: 3,
+                                       wheel1: Int32(data.deltaZ),
+                                       wheel2: 0,
+                                       wheel3: 0) {
+                scrollEvent.post(tap: CGEventTapLocation.cghidEventTap)
+            }
+            
+        case .rotate:
+            print("Rotation gesture not yet implemented")            case .swipe:
+            guard let direction = data.swipeDirection else { return }
+            let source = CGEventSource(stateID: .privateState)
+            if let swipeEvent = CGEvent(mouseEventSource: source,
+                                      mouseType: .mouseMoved,
+                                      mouseCursorPosition: location,
+                                      mouseButton: .left) {
+                let value: Int64
+                switch direction {
+                case .left:  value = 1
+                case .right: value = 2
+                case .up:    value = 3
+                case .down:  value = 4
+                }
+                
+                swipeEvent.setIntegerValueField(.eventSourceUserData, value: value)
+                swipeEvent.post(tap: CGEventTapLocation.cghidEventTap)
+            }
+            
+        case .smartZoom:
+            let source = CGEventSource(stateID: .privateState)
+            if let smartZoomEvent = CGEvent(mouseEventSource: source,
+                                          mouseType: .otherMouseDown,
+                                          mouseCursorPosition: location,
+                                          mouseButton: .center) {
+                smartZoomEvent.setIntegerValueField(.mouseEventButtonNumber, value: 2)
+                smartZoomEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                
+                Thread.sleep(forTimeInterval: 0.05)
+                
+                if let upEvent = CGEvent(mouseEventSource: nil,
+                                       mouseType: .otherMouseUp,
+                                       mouseCursorPosition: location,
+                                       mouseButton: .center) {
+                    upEvent.setIntegerValueField(.mouseEventButtonNumber, value: 2)
+                    upEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                }
+            }
+            
+        case .none:
+            print("No gesture type specified")
+        }
+    }
+}
+
+// MARK: - Public Interface
+extension ConnectionManager {
+    public func startListening() {
+        print("Starting to listen for connections")
+        isListening = true
+        connectionError = nil
+        setupNetworkListener()
+    }
+    
+    public func stopListening() {
+        print("Stopping listener")
+        isListening = false
+        connections.forEach { $0.cancel() }
+        connections.removeAll()
+        listener?.cancel()
+        listener = nil
+        connectedDevices.removeAll()
+    }
+}

@@ -1,0 +1,43 @@
+name: AirNative
+options:
+  bundleIdPrefix: com.airnative
+  deploymentTarget:
+    iOS: 17.0
+  xcodeVersion: "15.0"
+  createIntermediateGroups: true
+targets:
+  AirNative:
+    type: application
+    platform: iOS
+    sources: 
+      - path: Sources/AirNative
+        excludes:
+          - "**/.DS_Store"
+    settings:
+      base:
+        TARGETED_DEVICE_FAMILY: 2 # iPad only
+        DEVELOPMENT_TEAM: "YF546RX9B4" 
+        PRODUCT_BUNDLE_IDENTIFIER: com.airnative.app
+        CODE_SIGN_ENTITLEMENTS: Sources/AirNative/AirNative.entitlements
+        IPHONEOS_DEPLOYMENT_TARGET: 15.0
+        DEVELOPMENT_ASSET_PATHS: ""
+        ENABLE_PREVIEWS: YES
+        SWIFT_OPTIMIZATION_LEVEL: "-Onone" # Debug build
+        OTHER_LDFLAGS: [] # Ensure proper linking
+        SWIFT_INSTALL_OBJC_HEADER: NO
+        SWIFT_OBJC_INTERFACE_HEADER_NAME: ""
+    info:
+      path: Sources/AirNative/Info.plist
+      properties:
+        CFBundleDisplayName: AirNative
+        UIMainStoryboardFile: ""
+        UILaunchStoryboardName: LaunchScreen
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSBluetoothAlwaysUsageDescription: "AirNative needs Bluetooth access to connect to your Mac"
+        NSLocalNetworkUsageDescription: "AirNative needs local network access to connect to your Mac"
+        NSNearbyInteractionUsageDescription: "AirNative uses Nearby Interaction to precisely locate and connect to your Mac"
+        NSNearbyInteractionAllowOnceUsageDescription: "Allow AirNative to detect nearby Macs"

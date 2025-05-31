@@ -1,0 +1,43 @@
+name: AirNativeMac
+options:
+  bundleIdPrefix: com.airnative
+  deploymentTarget:
+    macOS: 12.0
+  xcodeVersion: "15.0"
+  createIntermediateGroups: true
+targets:
+  AirNativeMac:
+    type: application
+    platform: macOS
+    sources: 
+      - path: Sources/AirNativeMac
+        excludes:
+          - "**/.DS_Store"
+    settings:
+      base:
+        DEVELOPMENT_TEAM: "YF546RX9B4"
+        PRODUCT_BUNDLE_IDENTIFIER: com.airnative.mac
+        CODE_SIGN_ENTITLEMENTS: Sources/AirNativeMac/AirNativeMac.entitlements
+        MACOSX_DEPLOYMENT_TARGET: 12.0
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_PREVIEWS: YES
+        SWIFT_OPTIMIZATION_LEVEL: "-Onone" # Debug build
+        OTHER_LDFLAGS: [] # Ensure proper linking
+        SWIFT_INSTALL_OBJC_HEADER: NO
+        SWIFT_OBJC_INTERFACE_HEADER_NAME: ""
+        INFOPLIST_FILE: Sources/AirNativeMac/Info.plist
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        INFOPLIST_KEY_NSAppleEventsUsageDescription: "AirNative needs to control your Mac to handle keyboard and mouse input"
+        INFOPLIST_KEY_NSAccessibilityUsageDescription: "AirNative needs accessibility permissions to control your Mac"
+    info:
+      path: Sources/AirNativeMac/Info.plist
+      properties:
+        CFBundleDisplayName: AirNative Mac
+        LSMinimumSystemVersion: 12.0
+        NSLocalNetworkUsageDescription: "AirNative needs local network access to receive input from your iPad"
+        NSNearbyInteractionUsageDescription: "AirNative uses Nearby Interaction to precisely locate and connect to your iPad"
+        NSNearbyInteractionAllowOnceUsageDescription: "Allow AirNative to detect nearby iPads"
+        NSAccessibilityUsageDescription: "AirNative needs accessibility permissions to control your Mac"
+        NSAppleEventsUsageDescription: "AirNative needs to control your Mac to handle keyboard and mouse input" 

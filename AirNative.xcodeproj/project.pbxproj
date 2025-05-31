@@ -1,0 +1,377 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		008319807F4973BB8A35CB8C /* InputService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7B3A6E702C671237C8FFE0C /* InputService.swift */; };
+		07113C2A4643D6C5DDEF79AF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AB87F3AED512B8919DF48976 /* LaunchScreen.storyboard */; };
+		39FF5FF3BBD0C51AE443A355 /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E38CBF425614566E356BB140 /* ConnectionView.swift */; };
+		3BC94C1BB9F55E01E85D77F6 /* AirNativeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF5E587BFAA7412DD4DA9653 /* AirNativeApp.swift */; };
+		451AE30CD76993035E8C1311 /* KeyboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCCEF4AA605454F3C869AF8C /* KeyboardView.swift */; };
+		55519EBBF1DC78A3EDD96FF0 /* BluetoothService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30FAC84114E8AE1E3F7F460B /* BluetoothService.swift */; };
+		641F67B5C1DC8564D04D735A /* TrackpadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B6C88A342E8F114D6774D76 /* TrackpadView.swift */; };
+		79AFA4606E07B124122F24B4 /* ConnectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 426D588BF95F2E2AD005A49E /* ConnectionManager.swift */; };
+		B395A7EB1C27BF2AE15535F5 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B17998231602BD1B47AFFCC /* NetworkService.swift */; };
+		CD3E69279FDA67F87495784C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F13CD912AB8B8A568FD8ACB /* ContentView.swift */; };
+		F63A5604CB12D883632DD262 /* NearbyInteractionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B4AA38FD62856EBCCA832BB /* NearbyInteractionService.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0B6C88A342E8F114D6774D76 /* TrackpadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadView.swift; sourceTree = "<group>"; };
+		1CA03FE9129C6B94B8405EA2 /* AirNative.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AirNative.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		30FAC84114E8AE1E3F7F460B /* BluetoothService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothService.swift; sourceTree = "<group>"; };
+		3B4AA38FD62856EBCCA832BB /* NearbyInteractionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NearbyInteractionService.swift; sourceTree = "<group>"; };
+		426D588BF95F2E2AD005A49E /* ConnectionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionManager.swift; sourceTree = "<group>"; };
+		8F13CD912AB8B8A568FD8ACB /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		95DAC90B32807D308F4E6DFA /* AirNative.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AirNative.entitlements; sourceTree = "<group>"; };
+		9B17998231602BD1B47AFFCC /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
+		AB87F3AED512B8919DF48976 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		AD0EA5A991F2DF7941029562 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		C7B3A6E702C671237C8FFE0C /* InputService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputService.swift; sourceTree = "<group>"; };
+		DCCEF4AA605454F3C869AF8C /* KeyboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardView.swift; sourceTree = "<group>"; };
+		DF5E587BFAA7412DD4DA9653 /* AirNativeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirNativeApp.swift; sourceTree = "<group>"; };
+		E38CBF425614566E356BB140 /* ConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		535D9D4258CCDAF8AE096726 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				6938A8B7BF3325EFD94CF36D /* AirNative */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		6938A8B7BF3325EFD94CF36D /* AirNative */ = {
+			isa = PBXGroup;
+			children = (
+				95DAC90B32807D308F4E6DFA /* AirNative.entitlements */,
+				DF5E587BFAA7412DD4DA9653 /* AirNativeApp.swift */,
+				AD0EA5A991F2DF7941029562 /* Info.plist */,
+				AB87F3AED512B8919DF48976 /* LaunchScreen.storyboard */,
+				B9D870EFAEBB884B140C4F43 /* Services */,
+				FEF6E619C437380E3DA88485 /* Views */,
+			);
+			path = AirNative;
+			sourceTree = "<group>";
+		};
+		8DB4DB1E6E21CC48DD28209F /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1CA03FE9129C6B94B8405EA2 /* AirNative.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		998320FA783A851BDBD0FB6A = {
+			isa = PBXGroup;
+			children = (
+				535D9D4258CCDAF8AE096726 /* Sources */,
+				8DB4DB1E6E21CC48DD28209F /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		B9D870EFAEBB884B140C4F43 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				30FAC84114E8AE1E3F7F460B /* BluetoothService.swift */,
+				426D588BF95F2E2AD005A49E /* ConnectionManager.swift */,
+				C7B3A6E702C671237C8FFE0C /* InputService.swift */,
+				3B4AA38FD62856EBCCA832BB /* NearbyInteractionService.swift */,
+				9B17998231602BD1B47AFFCC /* NetworkService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		FEF6E619C437380E3DA88485 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				E38CBF425614566E356BB140 /* ConnectionView.swift */,
+				8F13CD912AB8B8A568FD8ACB /* ContentView.swift */,
+				DCCEF4AA605454F3C869AF8C /* KeyboardView.swift */,
+				0B6C88A342E8F114D6774D76 /* TrackpadView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4E7E1253D59FA6E06DC34BA4 /* AirNative */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 72B2B8C8CC9F87C2E40877BC /* Build configuration list for PBXNativeTarget "AirNative" */;
+			buildPhases = (
+				87D446316C3C4B3665C02B20 /* Sources */,
+				402007F4C51F9E669596E43E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AirNative;
+			packageProductDependencies = (
+			);
+			productName = AirNative;
+			productReference = 1CA03FE9129C6B94B8405EA2 /* AirNative.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		30B99D83F07FFAC6E8EE8B2C /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
+			};
+			buildConfigurationList = FA7C908DC542F74EDA64E8C1 /* Build configuration list for PBXProject "AirNative" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 998320FA783A851BDBD0FB6A;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4E7E1253D59FA6E06DC34BA4 /* AirNative */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		402007F4C51F9E669596E43E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				07113C2A4643D6C5DDEF79AF /* LaunchScreen.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		87D446316C3C4B3665C02B20 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3BC94C1BB9F55E01E85D77F6 /* AirNativeApp.swift in Sources */,
+				55519EBBF1DC78A3EDD96FF0 /* BluetoothService.swift in Sources */,
+				79AFA4606E07B124122F24B4 /* ConnectionManager.swift in Sources */,
+				39FF5FF3BBD0C51AE443A355 /* ConnectionView.swift in Sources */,
+				CD3E69279FDA67F87495784C /* ContentView.swift in Sources */,
+				008319807F4973BB8A35CB8C /* InputService.swift in Sources */,
+				451AE30CD76993035E8C1311 /* KeyboardView.swift in Sources */,
+				F63A5604CB12D883632DD262 /* NearbyInteractionService.swift in Sources */,
+				B395A7EB1C27BF2AE15535F5 /* NetworkService.swift in Sources */,
+				641F67B5C1DC8564D04D735A /* TrackpadView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		00B73F4A1E13D01A43C11A28 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		01E4A3D527D6D1DC07D8D306 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/AirNative/AirNative.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = X93FPCRZ4W;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = Sources/AirNative/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.airnative.app;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				TARGETED_DEVICE_FAMILY = 2;
+			};
+			name = Debug;
+		};
+		0A9E5FDA0BCF5D08545A1784 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/AirNative/AirNative.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = X93FPCRZ4W;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = Sources/AirNative/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.airnative.app;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				TARGETED_DEVICE_FAMILY = 2;
+			};
+			name = Release;
+		};
+		75C6A59F70227535D73A3567 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		72B2B8C8CC9F87C2E40877BC /* Build configuration list for PBXNativeTarget "AirNative" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				01E4A3D527D6D1DC07D8D306 /* Debug */,
+				0A9E5FDA0BCF5D08545A1784 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FA7C908DC542F74EDA64E8C1 /* Build configuration list for PBXProject "AirNative" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				75C6A59F70227535D73A3567 /* Debug */,
+				00B73F4A1E13D01A43C11A28 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 30B99D83F07FFAC6E8EE8B2C /* Project object */;
+}
