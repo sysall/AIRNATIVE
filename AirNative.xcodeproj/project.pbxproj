@@ -18,6 +18,7 @@
 		B395A7EB1C27BF2AE15535F5 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B17998231602BD1B47AFFCC /* NetworkService.swift */; };
 		CD3E69279FDA67F87495784C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F13CD912AB8B8A568FD8ACB /* ContentView.swift */; };
 		F63A5604CB12D883632DD262 /* NearbyInteractionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B4AA38FD62856EBCCA832BB /* NearbyInteractionService.swift */; };
+		F63A5604CB12D883632DD263 /* KeyboardMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = F63A5604CB12D883632DD264 /* KeyboardMapping.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +36,7 @@
 		DCCEF4AA605454F3C869AF8C /* KeyboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardView.swift; sourceTree = "<group>"; };
 		DF5E587BFAA7412DD4DA9653 /* AirNativeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirNativeApp.swift; sourceTree = "<group>"; };
 		E38CBF425614566E356BB140 /* ConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionView.swift; sourceTree = "<group>"; };
+		F63A5604CB12D883632DD264 /* KeyboardMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardMapping.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -94,6 +96,7 @@
 				8F13CD912AB8B8A568FD8ACB /* ContentView.swift */,
 				DCCEF4AA605454F3C869AF8C /* KeyboardView.swift */,
 				0B6C88A342E8F114D6774D76 /* TrackpadView.swift */,
+				F63A5604CB12D883632DD264 /* KeyboardMapping.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -171,6 +174,7 @@
 				F63A5604CB12D883632DD262 /* NearbyInteractionService.swift in Sources */,
 				B395A7EB1C27BF2AE15535F5 /* NetworkService.swift in Sources */,
 				641F67B5C1DC8564D04D735A /* TrackpadView.swift in Sources */,
+				F63A5604CB12D883632DD263 /* KeyboardMapping.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
