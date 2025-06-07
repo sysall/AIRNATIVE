@@ -51,9 +51,17 @@ struct KeyboardView: View {
                         // Main keyboard rows
                         ForEach(layout.rows, id: \.self) { row in
                             HStack(spacing: keySpacing) {
+                                let spaceMultiplier: CGFloat = 5
+                                let spaceCount = row.filter { $0 == " " }.count
+                                let normalKeyCount = CGFloat(row.count) - CGFloat(spaceCount) + CGFloat(spaceCount) * spaceMultiplier
+                                let totalSpacing = keySpacing * CGFloat(row.count - 1)
+                                let availableWidth = geometry.size.width - totalSpacing - 32 // 32 for padding
+                                let baseKeyWidth = availableWidth / normalKeyCount
                                 ForEach(Array(row.enumerated()), id: \.offset) { index, key in
                                     let isActive = isModifierActive(key)
-                                    KeyButton(text: key, width: keyWidth, height: keyHeight, isActive: isActive) {
+                                    let isSpace = key == " "
+                                    let keyW: CGFloat = isSpace ? baseKeyWidth * spaceMultiplier : baseKeyWidth
+                                    KeyButton(text: key, width: keyW, height: keyHeight, isActive: isActive) {
                                         handleKeyPress(key)
                                     }
                                 }
@@ -202,14 +210,14 @@ enum KeyboardLayout: String, CaseIterable, Identifiable {
                 ["&", "é", "\"", "'", "(", "-", "è", "_", "ç", "à", ")", "="],
                 ["A", "Z", "E", "R", "T", "Y", "U", "I", "O", "P", "^", "$", "⌫"],
                 ["Q", "S", "D", "F", "G", "H", "J", "K", "L", "M", "ù", "µ","\\", "⏎"],
-                ["<", ">", "W", "X", "C", "V", "B", "N", ",", ";","↑", ".", "/"],
+                ["<", ">", "W", "X", "C", "V", "B", "N", ",", ";", ".", "↑", "/"],
                 ["fn", "⌃\ncontrol", "⌥", "⌘", " ", "⌘", "⌥", "←", "↓", "→"]
             ]
         case .qwerty:
             return [
                 ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "[", "]", "⌫"],
                 ["`", "A", "S", "D", "F", "G", "H", "J", "K", "L", "M", "'","-","⏎"],
-                ["<", ">","Z", "X", "C", "V", "B", "N", ";", ",", ".", "↑", "/", "="],
+                ["<", ">","Z", "X", "C", "V", "B", "N", ";", ",", ".", "/", "↑", "="],
                 ["fn", "⌃\ncontrol", "⌥", "⌘", " ", "⌘", "⌥", "←", "↓", "→"]
             ]
         }
@@ -235,8 +243,8 @@ struct KeyButton: View {
             Text(text)
                 .font(.system(size: 20, weight: .medium))
                 .frame(width: width, height: height)
-                .background(isActive ? Color.blue.opacity(0.3) : Color(.systemGray5))
-                .foregroundColor(.primary)
+                .background(isActive ? Color.blue.opacity(0.3) : Color.black)
+                .foregroundColor(.white)
                 .cornerRadius(8)
                 .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
         }
