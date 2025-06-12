@@ -16,42 +16,61 @@ struct ContentView: View {
     }
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            TrackpadView(inputService: inputService)
-                .tabItem {
-                    Label("Trackpad", systemImage: "rectangle.and.hand.point.up.left")
+        ZStack {
+            if connectionManager.isConnected {
+                TabView(selection: $selectedTab) {
+                    TrackpadView(inputService: inputService)
+                        .tabItem {
+                            Label("Trackpad", systemImage: "rectangle.and.hand.point.up.left")
+                        }
+                        .tag(0)
+                        .disabled(!connectionManager.isConnected)
+                    
+                    KeyboardView(inputService: inputService)
+                        .tabItem {
+                            Label("Keyboard", systemImage: "keyboard")
+                        }
+                        .tag(1)
+                        .disabled(!connectionManager.isConnected)
+                    
+                    ConnectionView(connectionManager: connectionManager)
+                        .tabItem {
+                            Label("Connection", systemImage: "wave.3.right")
+                        }
+                        .tag(2)
                 }
-                .tag(0)
-                .disabled(!connectionManager.isConnected)
-            
-            KeyboardView(inputService: inputService)
-                .tabItem {
-                    Label("Keyboard", systemImage: "keyboard")
+                .onAppear {
+                    // Start looking for devices when app launches
+                    connectionManager.startDiscovery()
                 }
-                .tag(1)
-                .disabled(!connectionManager.isConnected)
-            
-            ConnectionView(connectionManager: connectionManager)
-                .tabItem {
-                    Label("Connection", systemImage: "wave.3.right")
+                .onChange(of: connectionManager.isConnected) { _, connected in
+                    withAnimation {
+                        selectedTab = connected ? 0 : 2
+                    }
                 }
-                .tag(2)
-        }
-        .onAppear {
-            // Start looking for devices when app launches
-            connectionManager.startDiscovery()
-        }
-        .onChange(of: connectionManager.isConnected) { _, connected in
-            withAnimation {
-                selectedTab = connected ? 0 : 2
-            }
-        }
-        .onChange(of: selectedTab) { _, newTab in
-            // If user tries to access a disabled tab, switch to Connection tab
-            if (newTab == 0 || newTab == 1) && !connectionManager.isConnected {
-                withAnimation {
-                    selectedTab = 2
+                .onChange(of: selectedTab) { _, newTab in
+                    // If user tries to access a disabled tab, switch to Connection tab
+                    if (newTab == 0 || newTab == 1) && !connectionManager.isConnected {
+                        withAnimation {
+                            selectedTab = 2
+                        }
+                    }
                 }
+            } else if connectionManager.isSearching {
+                VStack(spacing: 24) {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle())
+                        .scaleEffect(2)
+                    Text("Searching for nearby Macs...")
+                        .font(.title3)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemBackground))
+            } else {
+                // Fallback to ConnectionView if not searching and not connected
+                ConnectionView(connectionManager: connectionManager)
             }
         }
     }
