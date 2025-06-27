@@ -42,8 +42,28 @@ struct MouseEventData: Codable {
 
 struct KeyEventData: Codable {
     let type: String
-    let keyCode: UInt16
+    let keyCode: UInt16?
     let isKeyDown: Bool
+    let modifiers: [UInt16]?
+    let character: String?
+    
+    // For character-based input
+    init(character: String) {
+        self.type = "keyboard"
+        self.keyCode = nil
+        self.isKeyDown = true
+        self.modifiers = nil
+        self.character = character
+    }
+    
+    // For key-based input (backward compatibility)
+    init(keyCode: UInt16, isKeyDown: Bool, modifiers: [UInt16]? = nil) {
+        self.type = "keyboard"
+        self.keyCode = keyCode
+        self.isKeyDown = isKeyDown
+        self.modifiers = modifiers
+        self.character = nil
+    }
 }
 
 // MARK: - Main Class
@@ -265,7 +285,7 @@ extension ConnectionManager {
             }
             
             if let keyData = try? JSONDecoder().decode(KeyEventData.self, from: data) {
-                print("Decoded keyboard event - keyCode: \(keyData.keyCode), isKeyDown: \(keyData.isKeyDown)")
+                print("🔍 MAC: Decoded keyboard event - keyCode: \(keyData.keyCode?.description ?? "nil"), character: \(keyData.character ?? "nil"), isKeyDown: \(keyData.isKeyDown)")
                 handleKeyEvent(keyData)
                 return
             }
@@ -281,18 +301,100 @@ extension ConnectionManager {
     }
     
     private func handleKeyEvent(_ data: KeyEventData) {
+        print("🎹 MAC: Received key event - keyCode: \(data.keyCode?.description ?? "nil"), character: \(data.character ?? "nil"), isKeyDown: \(data.isKeyDown)")
+        
         guard hasAccessibilityPermission else {
-            print("Cannot handle key event: No accessibility permission")
+            print("❌ MAC: Cannot handle key event: No accessibility permission")
             requestAccessibilityPermission()
             return
         }
         
+        // Handle character-based input
+        if let character = data.character {
+            print("📝 MAC: Handling character input: '\(character)'")
+            insertText(character)
+            return
+        }
+        
+        // Handle key-based input (backward compatibility)
+        guard let keyCode = data.keyCode else {
+            print("❌ MAC: No keyCode or character provided")
+            return
+        }
+        
+        print("⌨️ MAC: Handling key code: \(keyCode)")
         let source = CGEventSource(stateID: .privateState)
         let keyEvent = CGEvent(keyboardEventSource: source,
-                             virtualKey: CGKeyCode(data.keyCode),
+                             virtualKey: CGKeyCode(keyCode),
                              keyDown: data.isKeyDown)
         
+        // Apply modifier flags if provided
+        if let modifiers = data.modifiers, !modifiers.isEmpty {
+            var flags: CGEventFlags = []
+            for modifier in modifiers {
+                switch modifier {
+                case 0x38: // Shift
+                    flags.insert(.maskShift)
+                case 0x3A: // Option
+                    flags.insert(.maskAlternate)
+                case 0x37: // Command
+                    flags.insert(.maskCommand)
+                case 0x3B: // Control
+                    flags.insert(.maskControl)
+                default:
+                    break
+                }
+            }
+            keyEvent?.flags = flags
+        }
+        
         keyEvent?.post(tap: CGEventTapLocation.cghidEventTap)
+    }
+    
+    private func insertText(_ text: String) {
+        print("🔤 Attempting to insert text: '\(text)'")
+        
+        // Method 1: Try using pasteboard + Command+V
+        let pasteboard = NSPasteboard.general
+        let oldContents = pasteboard.string(forType: .string)
+        
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        
+        // Send Command+V to paste
+        let source = CGEventSource(stateID: .privateState)
+        
+        // Command down
+        if let cmdDown = CGEvent(keyboardEventSource: source, virtualKey: 0x37, keyDown: true) {
+            cmdDown.flags = .maskCommand
+            cmdDown.post(tap: .cghidEventTap)
+        }
+        
+        // V down
+        if let vDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true) {
+            vDown.flags = .maskCommand
+            vDown.post(tap: .cghidEventTap)
+        }
+        
+        // V up
+        if let vUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false) {
+            vUp.post(tap: .cghidEventTap)
+        }
+        
+        // Command up
+        if let cmdUp = CGEvent(keyboardEventSource: source, virtualKey: 0x37, keyDown: false) {
+            cmdUp.post(tap: .cghidEventTap)
+        }
+        
+        // Restore original pasteboard contents after a delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            if let oldContents = oldContents {
+                pasteboard.clearContents()
+                pasteboard.setString(oldContents, forType: .string)
+            }
+        }
+        
+        print("✅ Text inserted using pasteboard method")
     }
 }
 

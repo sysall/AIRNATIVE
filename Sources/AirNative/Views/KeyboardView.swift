@@ -47,7 +47,7 @@ struct KeyboardView: View {
     private func numberRow(geometry: GeometryProxy) -> some View {
         let numbers = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
         return keyRow(keys: numbers, geometry: geometry) { key in
-            sendKey(.number(key))
+            sendKey(.character(key))
         }
     }
     
@@ -124,10 +124,10 @@ struct KeyboardView: View {
             toggleModifier(&isControlPressed, keyCode: VirtualKeyCode.control)
         default:
             sendKey(.character(key))
+            
             // Auto-release shift after typing a character (one-shot behavior)
             if isShiftPressed {
                 isShiftPressed = false
-                inputService.sendKeyEvent(keyCode: VirtualKeyCode.shift, isKeyDown: false)
             }
         }
     }
@@ -138,14 +138,32 @@ struct KeyboardView: View {
     }
     
     private func sendKey(_ key: KeyboardKey) {
+        // For characters (letters, numbers, symbols), send the actual character
+        if case .character(let char) = key {
+            let finalChar = determineFinalCharacter(char)
+            print("📤 Sending character: '\(finalChar)'")
+            inputService.sendCharacter(finalChar)
+            return
+        }
+        
+        // For special keys (function keys, arrows, etc.), use key codes
         guard let keyMapping = getKeyMapping(for: key) else { return }
         
-        // Pass the character to buildModifiers so it can determine if Shift is needed for letters
-        let character = key.character
-        let modifiers = buildModifiers(for: keyMapping, character: character)
+        // Build modifiers including current modifier state
+        let modifiers = buildModifiers(for: keyMapping, key: key)
         
-        // Send key sequence: modifiers down → key down → key up → modifiers up
+        // Send key sequence with modifiers
         sendKeySequence(keyCode: keyMapping.keyCode, modifiers: modifiers)
+    }
+    
+    private func determineFinalCharacter(_ char: String) -> String {
+        // For letters, return uppercase if shift is pressed
+        if layout.isLetter(char) {
+            return isShiftPressed ? char.uppercased() : char.lowercased()
+        }
+        
+        // For other characters, return as-is (they're already the final character)
+        return char
     }
     
     private func getKeyMapping(for key: KeyboardKey) -> KeyMapping? {
@@ -161,40 +179,24 @@ struct KeyboardView: View {
         }
     }
     
-    private func buildModifiers(for keyMapping: KeyMapping, character: String? = nil) -> [UInt16] {
+    private func buildModifiers(for keyMapping: KeyMapping, key: KeyboardKey) -> [UInt16] {
         var modifiers: [UInt16] = []
         
-        // Add Shift modifier if:
-        // 1. The key specifically needs shift (like @ or #)
-        // 2. Shift is pressed and we're typing a letter (to get uppercase)
-        let needsShift = keyMapping.needsShift || (isShiftPressed && character != nil && layout.isLetter(character!))
-        
-        if needsShift {
+        // Only add modifiers for special keys that require them
+        if keyMapping.needsShift {
             modifiers.append(VirtualKeyCode.shift)
         }
-        if isOptionPressed || keyMapping.needsOption {
+        if keyMapping.needsOption {
             modifiers.append(VirtualKeyCode.option)
-        }
-        if isCommandPressed {
-            modifiers.append(VirtualKeyCode.command)
-        }
-        if isControlPressed {
-            modifiers.append(VirtualKeyCode.control)
         }
         
         return modifiers
     }
     
     private func sendKeySequence(keyCode: UInt16, modifiers: [UInt16]) {
-        // Send modifier keys down
-        modifiers.forEach { inputService.sendKeyEvent(keyCode: $0, isKeyDown: true) }
-        
-        // Send main key
-        inputService.sendKeyEvent(keyCode: keyCode, isKeyDown: true)
+        // Send main key with modifiers applied
+        inputService.sendKeyEvent(keyCode: keyCode, isKeyDown: true, modifiers: modifiers)
         inputService.sendKeyEvent(keyCode: keyCode, isKeyDown: false)
-        
-        // Send modifier keys up (in reverse order)
-        modifiers.reversed().forEach { inputService.sendKeyEvent(keyCode: $0, isKeyDown: false) }
     }
 }
 
@@ -265,7 +267,7 @@ enum KeyboardLayout: String, CaseIterable, Identifiable {
                 ["@", "a", "z", "e", "r", "t", "y", "u", "i", "o", "p", "^", "_", "%", "⌫"],
                 ["⇪", "\\", "q", "s", "d", "f", "g", "h", "j", "k", "l", "m", "$", "*", "⏎"],
                 ["⇧", "<", ">", "w", "x", "c", "v", "b", "n", ",", ";", ".", "?", "↑", "="],
-                ["#", "⌃", "⌥", "⌘", " ", "⌘", "⌥", "←", "↓", "→"]
+                ["#", "⌥", "⌘", " ", "⌘", "⌥", "←", "↓", "→"]
             ]
         case .qwerty:
             return [
@@ -273,164 +275,23 @@ enum KeyboardLayout: String, CaseIterable, Identifiable {
                 ["@", "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "%", "|", "_", "⌫"],
                 ["⇪", "/", "a", "s", "d", "f", "g", "h", "j", "k", "l", "m", ":", "⏎"],
                 ["⇧", "<", ">", "z", "x", "c", "v", "b", "n", ";", ",", ".", "?", "↑", "="],
-                ["#", "⌃", "⌥", "⌘", " ", "⌘", "⌥", "←", "↓", "→"]
+                ["#", "⌥", "⌘", " ", "⌘", "⌥", "←", "↓", "→"]
             ]
         }
     }
     
     func keyMapping(for character: String) -> KeyMapping? {
-        // Handle special characters based on layout
-        switch self {
-        case .azerty:
-            return azertyMapping[character]
-        case .qwerty:
-            return qwertyMapping[character]
-        }
+        // Only return mappings for special control keys
+        return controlKeyMapping[character]
     }
     
     func isLetter(_ character: String) -> Bool {
         return character.count == 1 && character.rangeOfCharacter(from: .letters) != nil
     }
     
-    private var azertyMapping: [String: KeyMapping] {
+    private var controlKeyMapping: [String: KeyMapping] {
         [
-            // Row 1 symbols
-            "&": KeyMapping(keyCode: 0x12),
-            "é": KeyMapping(keyCode: 0x13),
-            "\"": KeyMapping(keyCode: 0x14),
-            "'": KeyMapping(keyCode: 0x15),
-            "(": KeyMapping(keyCode: 0x17),
-            ")": KeyMapping(keyCode: 0x1B),
-            "è": KeyMapping(keyCode: 0x1A),
-            "!": KeyMapping(keyCode: 0x1C),
-            "/": KeyMapping(keyCode: 0x2C),
-            "ç": KeyMapping(keyCode: 0x19),
-            "à": KeyMapping(keyCode: 0x1D),
-            "+": KeyMapping(keyCode: 0x18),
-            "-": KeyMapping(keyCode: 0x18),
-            "{": KeyMapping(keyCode: 0x21),
-            "}": KeyMapping(keyCode: 0x1E),
-            
-            // Letters - AZERTY layout specific
-            "a": KeyMapping(keyCode: 0x0C), // Q key on physical keyboard
-            "z": KeyMapping(keyCode: 0x0D), // W key on physical keyboard
-            "e": KeyMapping(keyCode: 0x0E),
-            "r": KeyMapping(keyCode: 0x0F),
-            "t": KeyMapping(keyCode: 0x11),
-            "y": KeyMapping(keyCode: 0x10),
-            "u": KeyMapping(keyCode: 0x20),
-            "i": KeyMapping(keyCode: 0x22),
-            "o": KeyMapping(keyCode: 0x1F),
-            "p": KeyMapping(keyCode: 0x23),
-            "q": KeyMapping(keyCode: 0x00), // A key on physical keyboard
-            "s": KeyMapping(keyCode: 0x01),
-            "d": KeyMapping(keyCode: 0x02),
-            "f": KeyMapping(keyCode: 0x03),
-            "g": KeyMapping(keyCode: 0x05),
-            "h": KeyMapping(keyCode: 0x04),
-            "j": KeyMapping(keyCode: 0x26),
-            "k": KeyMapping(keyCode: 0x28),
-            "l": KeyMapping(keyCode: 0x25),
-            "m": KeyMapping(keyCode: 0x29),
-            "w": KeyMapping(keyCode: 0x06), // Z key on physical keyboard
-            "x": KeyMapping(keyCode: 0x07),
-            "c": KeyMapping(keyCode: 0x08),
-            "v": KeyMapping(keyCode: 0x09),
-            "b": KeyMapping(keyCode: 0x0B),
-            "n": KeyMapping(keyCode: 0x2D),
-            
-            // Special characters
-            "@": KeyMapping(keyCode: 0x0A, needsShift: true),
-            "#": KeyMapping(keyCode: 0x21, needsShift: true),
-            "^": KeyMapping(keyCode: 0x21),
-            "_": KeyMapping(keyCode: 0x1B),
-            "%": KeyMapping(keyCode: 0x17),
-            "\\": KeyMapping(keyCode: 0x2A),
-            "$": KeyMapping(keyCode: 0x1E),
-            "*": KeyMapping(keyCode: 0x17),
-            "<": KeyMapping(keyCode: 0x32),
-            ">": KeyMapping(keyCode: 0x2F),
-            ",": KeyMapping(keyCode: 0x2E),
-            ";": KeyMapping(keyCode: 0x2B),
-            ".": KeyMapping(keyCode: 0x2F),
-            "?": KeyMapping(keyCode: 0x2C),
-            "=": KeyMapping(keyCode: 0x2C),
-            
-            // Control keys
-            "⏎": KeyMapping(keyCode: VirtualKeyCode.enter),
-            " ": KeyMapping(keyCode: VirtualKeyCode.space),
-            "⌫": KeyMapping(keyCode: VirtualKeyCode.backspace),
-            "←": KeyMapping(keyCode: VirtualKeyCode.leftArrow),
-            "→": KeyMapping(keyCode: VirtualKeyCode.rightArrow),
-            "↑": KeyMapping(keyCode: VirtualKeyCode.upArrow),
-            "↓": KeyMapping(keyCode: VirtualKeyCode.downArrow),
-            "⇪": KeyMapping(keyCode: VirtualKeyCode.capsLock)
-        ]
-    }
-    
-    private var qwertyMapping: [String: KeyMapping] {
-        [
-            // Row 1 symbols
-            "&": KeyMapping(keyCode: 0x12),
-            "\"": KeyMapping(keyCode: 0x14),
-            "'": KeyMapping(keyCode: 0x15),
-            "(": KeyMapping(keyCode: 0x17),
-            "[": KeyMapping(keyCode: 0x21),
-            "!": KeyMapping(keyCode: 0x1C),
-            "{": KeyMapping(keyCode: 0x21),
-            "}": KeyMapping(keyCode: 0x1E),
-            ")": KeyMapping(keyCode: 0x1B),
-            "$": KeyMapping(keyCode: 0x1E),
-            "]": KeyMapping(keyCode: 0x1E),
-            "-": KeyMapping(keyCode: 0x18),
-            "+": KeyMapping(keyCode: 0x18),
-            "\\": KeyMapping(keyCode: 0x2A),
-            
-            // Letters - QWERTY layout specific
-            "q": KeyMapping(keyCode: 0x0C),
-            "w": KeyMapping(keyCode: 0x0D),
-            "e": KeyMapping(keyCode: 0x0E),
-            "r": KeyMapping(keyCode: 0x0F),
-            "t": KeyMapping(keyCode: 0x11),
-            "y": KeyMapping(keyCode: 0x10),
-            "u": KeyMapping(keyCode: 0x20),
-            "i": KeyMapping(keyCode: 0x22),
-            "o": KeyMapping(keyCode: 0x1F),
-            "p": KeyMapping(keyCode: 0x23),
-            "a": KeyMapping(keyCode: 0x00),
-            "s": KeyMapping(keyCode: 0x01),
-            "d": KeyMapping(keyCode: 0x02),
-            "f": KeyMapping(keyCode: 0x03),
-            "g": KeyMapping(keyCode: 0x05),
-            "h": KeyMapping(keyCode: 0x04),
-            "j": KeyMapping(keyCode: 0x26),
-            "k": KeyMapping(keyCode: 0x28),
-            "l": KeyMapping(keyCode: 0x25),
-            "z": KeyMapping(keyCode: 0x06),
-            "x": KeyMapping(keyCode: 0x07),
-            "c": KeyMapping(keyCode: 0x08),
-            "v": KeyMapping(keyCode: 0x09),
-            "b": KeyMapping(keyCode: 0x0B),
-            "n": KeyMapping(keyCode: 0x2D),
-            "m": KeyMapping(keyCode: 0x29),
-            
-            // Special characters
-            "@": KeyMapping(keyCode: 0x0A, needsShift: true),
-            "#": KeyMapping(keyCode: 0x21, needsShift: true),
-            "%": KeyMapping(keyCode: 0x17),
-            "|": KeyMapping(keyCode: 0x2A),
-            "_": KeyMapping(keyCode: 0x1B),
-            "/": KeyMapping(keyCode: 0x2C),
-            ":": KeyMapping(keyCode: 0x2B),
-            "<": KeyMapping(keyCode: 0x32),
-            ">": KeyMapping(keyCode: 0x2F),
-            ";": KeyMapping(keyCode: 0x2B),
-            ",": KeyMapping(keyCode: 0x2E),
-            ".": KeyMapping(keyCode: 0x2F),
-            "?": KeyMapping(keyCode: 0x2C),
-            "=": KeyMapping(keyCode: 0x18),
-            
-            // Control keys
+            // Control keys only
             "⏎": KeyMapping(keyCode: VirtualKeyCode.enter),
             " ": KeyMapping(keyCode: VirtualKeyCode.space),
             "⌫": KeyMapping(keyCode: VirtualKeyCode.backspace),

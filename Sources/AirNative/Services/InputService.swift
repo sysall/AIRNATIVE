@@ -45,10 +45,17 @@ public class InputService: ObservableObject {
         self.session = URLSession(configuration: config)
     }
     
-    public func sendKeyEvent(keyCode: UInt16, isKeyDown: Bool) {
+    public func sendKeyEvent(keyCode: UInt16, isKeyDown: Bool, modifiers: [UInt16] = []) {
         guard connectionManager.isConnected else { return }
         
-        let data = KeyEventData(keyCode: keyCode, isKeyDown: isKeyDown)
+        let data = KeyEventData(keyCode: keyCode, isKeyDown: isKeyDown, modifiers: modifiers.isEmpty ? nil : modifiers)
+        sendInputToMac(data: data)
+    }
+    
+    public func sendCharacter(_ character: String) {
+        guard connectionManager.isConnected else { return }
+        
+        let data = KeyEventData(character: character)
         sendInputToMac(data: data)
     }
     
@@ -121,13 +128,27 @@ public class InputService: ObservableObject {
 
 struct KeyEventData: Codable {
     let type: String
-    let keyCode: UInt16
+    let keyCode: UInt16?
     let isKeyDown: Bool
+    let modifiers: [UInt16]?
+    let character: String?
     
-    init(keyCode: UInt16, isKeyDown: Bool) {
+    // For character-based input
+    init(character: String) {
+        self.type = "keyboard"
+        self.keyCode = nil
+        self.isKeyDown = true
+        self.modifiers = nil
+        self.character = character
+    }
+    
+    // For key-based input (backward compatibility)
+    init(keyCode: UInt16, isKeyDown: Bool, modifiers: [UInt16]? = nil) {
         self.type = "keyboard"
         self.keyCode = keyCode
         self.isKeyDown = isKeyDown
+        self.modifiers = modifiers
+        self.character = nil
     }
 }
 
