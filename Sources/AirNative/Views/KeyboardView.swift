@@ -138,22 +138,23 @@ struct KeyboardView: View {
     }
     
     private func sendKey(_ key: KeyboardKey) {
-        // For characters (letters, numbers, symbols), send the actual character
+        // First check if we have a special key mapping (control keys like arrows, enter, etc.)
+        if let keyMapping = getKeyMapping(for: key) {
+            // Build modifiers including current modifier state
+            let modifiers = buildModifiers(for: keyMapping, key: key)
+            
+            // Send key sequence with modifiers
+            sendKeySequence(keyCode: keyMapping.keyCode, modifiers: modifiers)
+            return
+        }
+        
+        // For regular characters (letters, numbers, symbols), send the actual character
         if case .character(let char) = key {
             let finalChar = determineFinalCharacter(char)
             print("📤 Sending character: '\(finalChar)'")
             inputService.sendCharacter(finalChar)
             return
         }
-        
-        // For special keys (function keys, arrows, etc.), use key codes
-        guard let keyMapping = getKeyMapping(for: key) else { return }
-        
-        // Build modifiers including current modifier state
-        let modifiers = buildModifiers(for: keyMapping, key: key)
-        
-        // Send key sequence with modifiers
-        sendKeySequence(keyCode: keyMapping.keyCode, modifiers: modifiers)
     }
     
     private func determineFinalCharacter(_ char: String) -> String {
