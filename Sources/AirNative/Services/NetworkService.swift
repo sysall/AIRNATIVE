@@ -25,12 +25,13 @@ public class NetworkService: NSObject, ObservableObject {
     }
     
     // Send mouse or keyboard event data
-    public func sendInputData(_ data: Data) {
+    public func sendInputData(_ data: Data, completion: @escaping () -> Void = {}) {
         guard isConnected else {
             print("Cannot send data: Not connected")
+            completion()
             return
         }
-        send(data: data)
+        send(data: data, completion: completion)
     }
     
     private func setupBonjourDiscovery() {
@@ -185,7 +186,7 @@ public class NetworkService: NSObject, ObservableObject {
         }
     }
     
-    public func send(data: Data) {
+    public func send(data: Data, completion: @escaping () -> Void = {}) {
         // Add a newline character to separate messages
         var messageData = data
         messageData.append(0x0A) // Add newline character
@@ -199,6 +200,7 @@ public class NetworkService: NSObject, ObservableObject {
             } else {
                 print("Data sent successfully")
             }
+            completion()
         })
     }
     

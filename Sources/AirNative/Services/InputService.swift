@@ -35,6 +35,8 @@ public enum MouseEventType: String, Codable {
 public class InputService: ObservableObject {
     private let connectionManager: ConnectionManager
     private let session: URLSession
+    private let inputQueue = DispatchQueue(label: "com.airnative.input", qos: .userInteractive)
+    private let inputSemaphore = DispatchSemaphore(value: 1)
     
     public init(connectionManager: ConnectionManager) {
         self.connectionManager = connectionManager
@@ -89,40 +91,94 @@ public class InputService: ObservableObject {
     }
     
     private func sendInputToMac<T: Encodable>(data: T) {
-        // Encode the input data
-        guard let encodedData = try? JSONEncoder().encode(data) else { return }
-        
-        // Send based on connection method
-        switch connectionManager.connectionMethod {
-        case .network:
-            // For network connection, send through NetworkService
-            connectionManager.networkService.sendInputData(encodedData)
+        // Use a serial queue to ensure sequential processing of input events
+        inputQueue.async { [weak self] in
+            guard let self = self else { return }
             
-        case .nearbyInteraction:
-            // For NearbyInteraction, send through NearbyInteractionService
-            guard let macAddress = connectionManager.nearbyService.availableMacs.keys.first else { return }
+            // Wait for the semaphore to ensure sequential processing
+            self.inputSemaphore.wait()
             
-            // Create URL for local network communication
-            let urlString = "http://localhost:51234/input"
-            guard let url = URL(string: urlString) else { return }
-            
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = encodedData
-            request.setValue(macAddress, forHTTPHeaderField: "X-Device-Token")
-            
-            let task = session.dataTask(with: request) { _, _, error in
-                if let error = error {
-                    print("Failed to send input: \(error.localizedDescription)")
-                }
+            // Encode the input data
+            guard let encodedData = try? JSONEncoder().encode(data) else {
+                self.inputSemaphore.signal()
+                return
             }
-            task.resume()
             
-        case .determining:
-            // If still determining, do nothing
-            break
+            // Send based on connection method
+            switch self.connectionManager.connectionMethod {
+            case .network:
+                // For network connection, send through NetworkService
+                self.sendNetworkData(encodedData)
+                
+            case .nearbyInteraction:
+                // For NearbyInteraction, send through NearbyInteractionService
+                self.sendNearbyInteractionData(encodedData)
+                
+            case .determining:
+                // If still determining, do nothing
+                self.inputSemaphore.signal()
+                break
+            }
         }
+    }
+    
+    private func sendNetworkData(_ encodedData: Data) {
+        // Create a completion group to wait for the network operation
+        let group = DispatchGroup()
+        group.enter()
+        
+        // Send the data
+        connectionManager.networkService.sendInputData(encodedData) {
+            group.leave()
+        }
+        
+        // Wait for completion before allowing next input
+        group.wait()
+        
+        // Add a small delay to prevent overwhelming the Mac with rapid key events
+        Thread.sleep(forTimeInterval: 0.01) // 10ms delay
+        
+        inputSemaphore.signal()
+    }
+    
+    private func sendNearbyInteractionData(_ encodedData: Data) {
+        guard let macAddress = connectionManager.nearbyService.availableMacs.keys.first else {
+            inputSemaphore.signal()
+            return
+        }
+        
+        // Create URL for local network communication
+        let urlString = "http://localhost:51234/input"
+        guard let url = URL(string: urlString) else {
+            inputSemaphore.signal()
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = encodedData
+        request.setValue(macAddress, forHTTPHeaderField: "X-Device-Token")
+        
+        // Create a completion group to wait for the network operation
+        let group = DispatchGroup()
+        group.enter()
+        
+        let task = session.dataTask(with: request) { _, _, error in
+            if let error = error {
+                print("Failed to send input: \(error.localizedDescription)")
+            }
+            group.leave()
+        }
+        task.resume()
+        
+        // Wait for completion before allowing next input
+        group.wait()
+        
+        // Add a small delay to prevent overwhelming the Mac with rapid key events
+        Thread.sleep(forTimeInterval: 0.01) // 10ms delay
+        
+        inputSemaphore.signal()
     }
 }
 
