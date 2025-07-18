@@ -75,18 +75,34 @@ public class InputService: ObservableObject {
     ) {
         guard connectionManager.isConnected else { return }
         
+        // Determine the button type based on finger count
+        let buttonType: MouseButton? = {
+            switch fingerCount {
+            case 1:
+                return .left
+            case 2:
+                return .right
+            default:
+                return button
+            }
+        }()
+        
         let data = MouseEventData(
             type: type,
             deltaX: deltaX,
             deltaY: deltaY,
             deltaZ: deltaZ,
-            button: button,
+            button: buttonType,
             rotation: rotation,
             gestureType: gestureType,
             gestureScale: gestureScale,
             swipeDirection: swipeDirection,
             fingerCount: fingerCount
         )
+        
+        // Debug output
+        print("🖱️ iOS: Sending mouse event - type: \(type), button: \(buttonType?.rawValue ?? "nil"), fingerCount: \(fingerCount)")
+        
         sendInputToMac(data: data)
     }
     
@@ -98,20 +114,20 @@ public class InputService: ObservableObject {
             // Wait for the semaphore to ensure sequential processing
             self.inputSemaphore.wait()
             
-            // Encode the input data
+        // Encode the input data
             guard let encodedData = try? JSONEncoder().encode(data) else {
                 self.inputSemaphore.signal()
                 return
             }
-            
-            // Send based on connection method
+        
+        // Send based on connection method
             switch self.connectionManager.connectionMethod {
-            case .network:
-                // For network connection, send through NetworkService
+        case .network:
+            // For network connection, send through NetworkService
                 self.sendNetworkData(encodedData)
-                
-            case .nearbyInteraction:
-                // For NearbyInteraction, send through NearbyInteractionService
+            
+        case .nearbyInteraction:
+            // For NearbyInteraction, send through NearbyInteractionService
                 self.sendNearbyInteractionData(encodedData)
                 
             case .determining:
@@ -135,8 +151,8 @@ public class InputService: ObservableObject {
         // Wait for completion before allowing next input
         group.wait()
         
-        // Add a small delay to prevent overwhelming the Mac with rapid key events
-        Thread.sleep(forTimeInterval: 0.01) // 10ms delay
+        // Remove the delay to improve responsiveness
+        // Thread.sleep(forTimeInterval: 0.01) // 10ms delay
         
         inputSemaphore.signal()
     }
@@ -146,37 +162,37 @@ public class InputService: ObservableObject {
             inputSemaphore.signal()
             return
         }
-        
-        // Create URL for local network communication
-        let urlString = "http://localhost:51234/input"
+            
+            // Create URL for local network communication
+            let urlString = "http://localhost:51234/input"
         guard let url = URL(string: urlString) else {
             inputSemaphore.signal()
             return
         }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = encodedData
-        request.setValue(macAddress, forHTTPHeaderField: "X-Device-Token")
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = encodedData
+            request.setValue(macAddress, forHTTPHeaderField: "X-Device-Token")
         
         // Create a completion group to wait for the network operation
         let group = DispatchGroup()
         group.enter()
-        
-        let task = session.dataTask(with: request) { _, _, error in
-            if let error = error {
-                print("Failed to send input: \(error.localizedDescription)")
-            }
+            
+            let task = session.dataTask(with: request) { _, _, error in
+                if let error = error {
+                    print("Failed to send input: \(error.localizedDescription)")
+                }
             group.leave()
-        }
-        task.resume()
-        
+            }
+            task.resume()
+            
         // Wait for completion before allowing next input
         group.wait()
         
-        // Add a small delay to prevent overwhelming the Mac with rapid key events
-        Thread.sleep(forTimeInterval: 0.01) // 10ms delay
+        // Remove the delay to improve responsiveness
+        // Thread.sleep(forTimeInterval: 0.01) // 10ms delay
         
         inputSemaphore.signal()
     }

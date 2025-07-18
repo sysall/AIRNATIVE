@@ -11,21 +11,24 @@ struct TrackpadView: View {
     @State private var isDoubleTapping = false
     @State private var isDragging = false
     @State private var lastGestureTime = Date()
-    @State private var lastTouchCount = 0
     @State private var lastClickLocation = CGPoint.zero
     @State private var twoFingerTranslation = CGSize.zero
+    @State private var isInTwoFingerGesture = false
 
     var body: some View {
         GeometryReader { geometry in
             Rectangle()
                 .fill(Color.gray.opacity(0.1))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                // Basic touch handling for movement and clicks
+                // Combined gesture for smooth movement and tap detection
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .updating($dragState) { value, state, _ in
-                            // Only handle single finger gestures here
-                            guard lastTouchCount <= 1 else { return }
+                            // Only handle single finger movement - ignore if in two-finger gesture
+                            guard !isInTwoFingerGesture else { 
+                                print("Single finger gesture blocked - two finger gesture active")
+                                return 
+                            }
                             
                             let delta = CGSize(
                                 width: value.translation.width - previousTranslation.width,
@@ -38,25 +41,103 @@ struct TrackpadView: View {
                                 inputService.sendMouseEvent(
                                     type: .move,
                                     deltaX: Float(delta.width),
-                                    deltaY: Float(delta.height)
+                                    deltaY: Float(delta.height),
+                                    fingerCount: 1
                                 )
                             }
                             previousTranslation = value.translation
                         }
                         .onEnded { value in
                             previousTranslation = .zero
-                            if isDragging {
-                                inputService.sendMouseEvent(type: .dragEnd)
+                            
+                            // Only handle single finger gestures - ignore if in two-finger gesture
+                            guard !isInTwoFingerGesture else { return }
+                            
+                            // Check if this was a tap (minimal movement)
+                            let totalMovement = sqrt(pow(value.translation.width, 2) + pow(value.translation.height, 2))
+                            if totalMovement < 5 { // Less than 5 points of movement = tap
+                                print("Single finger tap recognized as left click")
+                                inputService.sendMouseEvent(type: .click, fingerCount: 1)
+                                isTapping = true
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    isTapping = false
+                                }
+                            } else if isDragging {
+                                inputService.sendMouseEvent(type: .dragEnd, fingerCount: 1)
                                 isDragging = false
                             }
                         }
                 )
-                // Two finger scrolling
-                .gesture(
-                    DragGesture(minimumDistance: 0)
+                // Two finger detection using MagnificationGesture - higher priority
+                .highPriorityGesture(
+                    MagnificationGesture(minimumScaleDelta: 0)
                         .onChanged { value in
-                            // Only handle two finger gestures
-                            guard lastTouchCount == 2 else { return }
+                            // Mark that we're in a two-finger gesture immediately
+                            if !isInTwoFingerGesture {
+                                print("Two finger gesture detected - blocking single finger gestures")
+                                isInTwoFingerGesture = true
+                            }
+                        }
+                        .onEnded { value in
+                            // If magnification ends at 1.0 (no scaling), it was likely a tap
+                            if abs(value - 1.0) < 0.1 {
+                                print("Two finger tap recognized as right-click - scale: \(value)")
+                                inputService.sendMouseEvent(type: .rightClick, fingerCount: 2)
+                            } else {
+                                print("Two finger gesture ended but not a tap - scale: \(value)")
+                            }
+                            
+                            // Delay resetting the flag to prevent single-finger interference
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                isInTwoFingerGesture = false
+                            }
+                        }
+                )
+                // Two finger scroll gesture
+                .simultaneousGesture(
+                    MagnificationGesture()
+                        .onChanged { value in
+                            // Two finger pinch gesture
+                            print("Pinching gesture recognized with scale: \(value)")
+                            let delta = value / scale
+                            scale = value
+                            inputService.sendMouseEvent(
+                                type: .gesture,
+                                deltaZ: Float(delta - 1.0) * 10,
+                                gestureType: .pinch,
+                                gestureScale: Float(value),
+                                fingerCount: 2
+                            )
+                        }
+                        .onEnded { _ in
+                            scale = 1.0
+                        }
+                )
+                // Two finger rotation
+                .simultaneousGesture(
+                    RotationGesture()
+                        .onChanged { angle in
+                            // Two finger rotation gesture
+                            print("Rotating gesture recognized with angle: \(angle)")
+                            let delta = angle - rotation
+                            rotation = angle
+                            inputService.sendMouseEvent(
+                                type: .gesture,
+                                rotation: Float(delta.radians),
+                                gestureType: .rotate,
+                                fingerCount: 2
+                            )
+                        }
+                        .onEnded { _ in
+                            rotation = .zero
+                        }
+                )
+                // Scroll gesture with higher minimum distance to avoid conflicts
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 10) // Increased minimum distance
+                        .onChanged { value in
+                            // Only treat as scroll if there's significant movement
+                            guard isInTwoFingerGesture else { return }
                             
                             let delta = CGSize(
                                 width: value.translation.width - twoFingerTranslation.width,
@@ -65,97 +146,32 @@ struct TrackpadView: View {
                             
                             inputService.sendMouseEvent(
                                 type: .scroll,
-                                deltaX: Float(delta.width),
-                                deltaY: Float(delta.height),
+                                deltaX: Float(delta.width * 0.5), // Reduce sensitivity
+                                deltaY: Float(-delta.height * 0.5), // Invert Y and reduce sensitivity
                                 fingerCount: 2
                             )
                             
                             twoFingerTranslation = value.translation
                         }
-                        .onEnded { _ in
+                        .onEnded { value in
                             twoFingerTranslation = .zero
-                        }
-                )
-                // Enhanced tap gesture handling
-                .gesture(
-                    SpatialTapGesture(count: 1)
-                        .onEnded { _ in
-                            let now = Date()
-                            // Only handle single finger taps
-                            guard lastTouchCount <= 1 else { return }
                             
-                            if now.timeIntervalSince(lastGestureTime) < 0.3 {
-                                inputService.sendMouseEvent(type: .doubleClick, button: .left)
-                                isDoubleTapping = true
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    isDoubleTapping = false
-                                }
-                            } else {
-                                inputService.sendMouseEvent(type: .click, button: .left)
-                                isTapping = true
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    isTapping = false
+                            // Check if this was a tap (minimal movement) when not in magnification gesture
+                            if !isInTwoFingerGesture {
+                                let totalMovement = sqrt(pow(value.translation.width, 2) + pow(value.translation.height, 2))
+                                if totalMovement < 10 { // Less than 10 points = tap
+                                    print("Two finger tap detected via scroll gesture")
+                                    inputService.sendMouseEvent(type: .rightClick, fingerCount: 2)
                                 }
                             }
-                            lastGestureTime = now
                         }
                 )
-                // Improved right-click handling
+                // Three finger swipe
                 .simultaneousGesture(
-                    LongPressGesture(minimumDuration: 0.4)
-                        .onEnded { _ in
-                            // Only handle single finger long press
-                            guard lastTouchCount <= 1 else { return }
-                            inputService.sendMouseEvent(type: .rightClick, button: .right)
-                        }
-                )
-                // Enhanced two finger gestures (pinch, rotate)
-                .gesture(
-                    SimultaneousGesture(
-                        MagnificationGesture()
-                            .onChanged { value in
-                                // Only handle two finger gestures
-                                guard lastTouchCount == 2 else { return }
-                                
-                                let delta = value / scale
-                                scale = value
-                                inputService.sendMouseEvent(
-                                    type: .gesture,
-                                    deltaZ: Float(delta - 1.0) * 10,
-                                    gestureType: .pinch,
-                                    gestureScale: Float(value),
-                                    fingerCount: 2
-                                )
-                            }
-                            .onEnded { _ in
-                                scale = 1.0
-                            },
-                        RotationGesture()
-                            .onChanged { angle in
-                                // Only handle two finger gestures
-                                guard lastTouchCount == 2 else { return }
-                                
-                                let delta = angle - rotation
-                                rotation = angle
-                                inputService.sendMouseEvent(
-                                    type: .gesture,
-                                    rotation: Float(delta.radians),
-                                    gestureType: .rotate,
-                                    fingerCount: 2
-                                )
-                            }
-                            .onEnded { _ in
-                                rotation = .zero
-                            }
-                    )
-                )
-                // Three finger swipe detection
-                .gesture(
-                    DragGesture(minimumDistance: 15)
+                    DragGesture(minimumDistance: 30)
                         .onChanged { value in
-                            // Only handle three finger swipes
-                            guard lastTouchCount == 3 else { return }
-                            
+                            // Three finger swipe gesture
+                            print("Swiping gesture recognized with translation: \(value.translation)")
                             // Only handle swipe if within reasonable bounds
                             guard abs(value.translation.width) < 200 && abs(value.translation.height) < 200 else {
                                 return
