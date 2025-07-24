@@ -417,7 +417,12 @@ extension ConnectionManager {
                 y: min(max(screenFrame.height - currentLocation.y + CGFloat(data.deltaY), 0), screenFrame.height)
             )
         } else {
-            location = NSEvent.mouseLocation
+            // For clicks, use the current mouse location without transformation
+            let currentLocation = NSEvent.mouseLocation
+            location = CGPoint(
+                x: currentLocation.x,
+                y: currentLocation.y
+            )
         }
         
         print("Mouse event details - Location: \(location), Type: \(eventType)")
@@ -432,6 +437,9 @@ extension ConnectionManager {
                 }
                 
             case .click:
+                let currentCursor = NSEvent.mouseLocation
+                print("🖱️ Click event - Cursor at: \(currentCursor), Clicking at: \(location)")
+                
                 let source = CGEventSource(stateID: .privateState)
                 if let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown,
                                          mouseCursorPosition: location, mouseButton: .left) {
@@ -446,18 +454,34 @@ extension ConnectionManager {
                 
             case .doubleClick:
                 let source = CGEventSource(stateID: .privateState)
-                for i in 1...2 {
-                    if let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown,
-                                             mouseCursorPosition: location, mouseButton: .left) {
-                        downEvent.post(tap: CGEventTapLocation.cghidEventTap)
-                        Thread.sleep(forTimeInterval: 0.05)
-                        
-                        if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp,
-                                               mouseCursorPosition: location, mouseButton: .left) {
-                            upEvent.post(tap: CGEventTapLocation.cghidEventTap)
-                        }
+                // Send first click
+                if let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown,
+                                         mouseCursorPosition: location, mouseButton: .left) {
+                    downEvent.setIntegerValueField(.mouseEventClickState, value: 1)
+                    downEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                    Thread.sleep(forTimeInterval: 0.05)
+                    
+                    if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp,
+                                           mouseCursorPosition: location, mouseButton: .left) {
+                        upEvent.setIntegerValueField(.mouseEventClickState, value: 1)
+                        upEvent.post(tap: CGEventTapLocation.cghidEventTap)
                     }
-                    if i == 1 { Thread.sleep(forTimeInterval: 0.1) }
+                }
+                
+                Thread.sleep(forTimeInterval: 0.05) // Short delay between clicks
+                
+                // Send second click with click count = 2
+                if let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown,
+                                         mouseCursorPosition: location, mouseButton: .left) {
+                    downEvent.setIntegerValueField(.mouseEventClickState, value: 2)
+                    downEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                    Thread.sleep(forTimeInterval: 0.05)
+                    
+                    if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp,
+                                           mouseCursorPosition: location, mouseButton: .left) {
+                        upEvent.setIntegerValueField(.mouseEventClickState, value: 2)
+                        upEvent.post(tap: CGEventTapLocation.cghidEventTap)
+                    }
                 }
                 
             case .rightClick:
@@ -494,83 +518,13 @@ extension ConnectionManager {
                     upEvent.post(tap: CGEventTapLocation.cghidEventTap)
                 }
                 
-            case .gesture:
-                self?.handleGestureEvent(data, at: location)
-                
-            case .scroll:
-                if let scrollEvent = CGEvent(scrollWheelEvent2Source: nil,
-                                           units: .pixel,
-                                           wheelCount: 3,
-                                           wheel1: Int32(data.deltaY),
-                                           wheel2: Int32(data.deltaX),
-                                           wheel3: 0) {
-                    scrollEvent.post(tap: CGEventTapLocation.cghidEventTap)
-                }
+            case .gesture, .scroll:
+                // Simplified trackpad - no gesture or scroll support
+                print("Gesture/scroll events not supported in simplified mode")
             }
         }
     }
-    
-    private func handleGestureEvent(_ data: MouseEventData, at location: CGPoint) {
-        guard let gestureType = data.gestureType else {
-            print("Missing gesture type in event data")
-            return
-        }
-        
-        switch gestureType {
-        case .pinch:
-            if let scrollEvent = CGEvent(scrollWheelEvent2Source: nil,
-                                       units: .pixel,
-                                       wheelCount: 3,
-                                       wheel1: Int32(data.deltaZ),
-                                       wheel2: 0,
-                                       wheel3: 0) {
-                scrollEvent.post(tap: CGEventTapLocation.cghidEventTap)
-            }
-            
-        case .rotate:
-            print("Rotation gesture not yet implemented")            case .swipe:
-            guard let direction = data.swipeDirection else { return }
-            let source = CGEventSource(stateID: .privateState)
-            if let swipeEvent = CGEvent(mouseEventSource: source,
-                                      mouseType: .mouseMoved,
-                                      mouseCursorPosition: location,
-                                      mouseButton: .left) {
-                let value: Int64
-                switch direction {
-                case .left:  value = 1
-                case .right: value = 2
-                case .up:    value = 3
-                case .down:  value = 4
-                }
-                
-                swipeEvent.setIntegerValueField(.eventSourceUserData, value: value)
-                swipeEvent.post(tap: CGEventTapLocation.cghidEventTap)
-            }
-            
-        case .smartZoom:
-            let source = CGEventSource(stateID: .privateState)
-            if let smartZoomEvent = CGEvent(mouseEventSource: source,
-                                          mouseType: .otherMouseDown,
-                                          mouseCursorPosition: location,
-                                          mouseButton: .center) {
-                smartZoomEvent.setIntegerValueField(.mouseEventButtonNumber, value: 2)
-                smartZoomEvent.post(tap: CGEventTapLocation.cghidEventTap)
-                
-                Thread.sleep(forTimeInterval: 0.05)
-                
-                if let upEvent = CGEvent(mouseEventSource: nil,
-                                       mouseType: .otherMouseUp,
-                                       mouseCursorPosition: location,
-                                       mouseButton: .center) {
-                    upEvent.setIntegerValueField(.mouseEventButtonNumber, value: 2)
-                    upEvent.post(tap: CGEventTapLocation.cghidEventTap)
-                }
-            }
-            
-        case .none:
-            print("No gesture type specified")
-        }
-    }
+
 }
 
 // MARK: - Public Interface
